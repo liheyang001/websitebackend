@@ -4,47 +4,60 @@
 
 const db = require('../../config/db.js');
 
-var err400 = new Error('400');
-var err401 = new Error('401');
-var err403 = new Error('403');
-var err404 = new Error('404');
-
-exports.getAll = function (done) {
-    db.get().query('SELECT id FROM projects', function (err, rows) {
+exports.getAll = function (startIndex, count, done) {
+    let endIndex = startIndex + count;
+    db.get().query('SELECT id, title, subtitle, imageUri FROM projects;', function (err, rows) {
         if (!err){
-            return done (rows);
+            let info = [];
+            for (let i = startIndex; i < endIndex; i++){
+                info = {
+                    "id" : rows[i].id,
+                    "title": rows[i].title,
+                    "subtitle" : rows[i].subtitle,
+                    "imageUri": rows[i].imageUri
+                };
+            }
+            return done (null, info);
         } else {
             return done (err);
         }
     });
 };
 
-exports.insert = function (userInput, done) { //logInId
-    let projectTitle = userInput['title'];
-    let projectSubtitle = userInput['subtitle'];
-    let projectDesc = userInput['description'];
-    let projectImageUri = userInput['imageUri'];
-    let projectTarget = userInput['target'];
-    let info = [projectTitle, projectSubtitle, projectDesc, projectImageUri, projectTarget];
-    db.post().query('INSERT INTO projects (projectTitle, projectSubtitle, ' +
-        'projectDesc, projectImageUri, projectTarget) VALUES (?)', [info], function (err, rows) {
+exports.insert = function (info, done) {
+    let title = info['title'];
+    let subtitle = info['subtitle'];
+    let description = info['description'];
+    let imageUri = info['imageUri'];
+    let target= info['target'];
+    let creator = info[''];
+    let rewards = info[''];
+
+    let values = [title, subtitle, description, imageUri, target, [creator],[rewards]];
+    let sql = 'INSERT INTO projects (title, subtitle, description, imageUri, target, creator, rewards) ' +
+        'VALUES (?,?,?,?,?,?,?);';
+    db.post().query(sql, [values], function (err, result) {
         if (!err){
-            db.get().query('SELECT projectId FROM projects ORDER BY projectId DESC LIMIT 1', function (rows, err) {
-                if (!err){
-                    return done(rows);
-                } else {
-                    return done(err);
-                }
-            });
+            return done ({"SUCCESS" : "success insert a project"});
         } else {
-            return done(err);
+            return done (err);
         }
     });
 };
 
-exports.getOne = function (projectId, done) {
-    db.get().query('SELECT * FROM project WHERE projectId = ?', [projectId], function (err, rows) {
+exports.getOne = function (info, done) {
+    db.get().query('SELECT * FROM project WHERE projectId = ?', info, function (err, rows) {
         if(!err){
+            let creationDate = rows[0].creationDate;
+            let title = rows[0].title;
+            let subtitle = rows[0].subtitle;
+            let description = rows[0].description;
+            let imageUri = rows[0].imageUri;
+            let target = rows[0].target;
+            let progress = rows[0].progress;
+
+
+
             return done(rows);
         } else {
             return done(err);
@@ -92,12 +105,25 @@ exports.pledgeAmount = function (amount) {
     });
 };
 
-exports.getOneReward = function (rewardId, done) {
-    db.get().query('SELECT * FROM reward where rewardId = ?', [rewardId], function (err, rows) {
+exports.listReward = function (rewardId, done) {
+    db.get().query('SELECT id, amount, description FROM reward where rewardId = ?', [rewardId], function (err, rows) {
+        let res = [];
         if(!err){
             return done(rows);
         }else {
-            return done(err);
+            for (data in rows){
+                let id = data.id;
+                let amount = data.amount;
+                let description = data.description;
+                let info = {
+                    "id" : id,
+                    "amount": amount,
+                    "description": description
+                };
+                res.push(info);
+            }
+
+            return done(err, res);
         }
     });
 };
