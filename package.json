@@ -1,10 +1,25 @@
+
+
 {
-  "name": "application-name",
+  "name": "assignment1",
+  "description": "API for crowd_funding.",
+  "homepage": "http://csse-s365.canterbury.ac.nz",
+  "keywords": ["crowd_funding", "application", "api"],
+  "author": "Heyang Li <hli60@uclive.ac.nz>",
+  "main": "app.js",
   "version": "0.0.1",
-  "scripts": {
-    "start": "node test.js"
-  },
   "dependencies": {
-    "mysql": "^2.13.0"
+    "express": "^4.15.3",
+    "mysql": "^2.13.0",
+    "body-parser": "^1.17.2",
+    "passport" : "~0.1.17",
+    "passport-local" : "~0.1.6",
+    "promise-mysql": "^3.0.2",
+    "async": "^2.5.0",
+    "step": "^1.0.0",
+    "fs": "0.0.1-security",
+    "jwt-simple": "^0.5.1",
+    "moment": "^2.18.1"
   }
+
 }
