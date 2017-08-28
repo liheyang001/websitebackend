@@ -3,137 +3,282 @@
  */
 
 const db = require('../../config/db.js');
+const Users = require('../models/user.server.model.js');
 
-exports.getAll = function (startIndex, count, done) {
-    let endIndex = startIndex + count;
-    db.get().query('SELECT id, title, subtitle, imageUri FROM projects;', function (err, rows) {
-        if (!err){
-            let info = [];
-            for (let i = startIndex; i < endIndex; i++){
-                info = {
-                    "id" : rows[i].id,
-                    "title": rows[i].title,
-                    "subtitle" : rows[i].subtitle,
-                    "imageUri": rows[i].imageUri
-                };
+var RSVP = require('rsvp');
+const jwt = require('jsonwebtoken');
+const moment = require('moment');
+
+var  algorithm = 'aes-256-ctr';
+var privateKey = '37LvDSm4XvjYOh9Y';
+
+var error401 = new Error('401');
+var error403 = new Error('403');
+var error404 = new Error('404');
+
+//check user information
+exports.checkUsers = function(creators){
+	//using promise function
+	return new RSVP.Promise(function(resolve, reject){
+		db.get().query('SELECT id, name FROM Users WHERE (id, name) in (?);', [creators], function(err, rows){
+		  if(err){
+                    return reject(err);
+                }else{
+					return resolve(rows[0]);
+				}
+		});
+});
+}
+
+
+exports.insertProject = function(project){
+	return new RSVP.Promise(function(resolve, reject){
+                   return db.post().query('INSERT INTO Project (Title, Subtitle, ImageUri, Description, Target) VALUES (?,?,?,?,?)', project, function (err, result) {
+                        if(err){
+                            return reject(err);
+                        }else{
+                            return resolve(result['insertId']);
+                        }
+                    });
+}
+
+);
+
+}
+
+exports.insertProjectCreators = function(projectCreators){
+	return new RSVP.Promise(function(resolve, reject){
+                   return db.post().query('INSERT INTO ProjectCreators (UserId, ProjectId) VALUES (?,?);', projectCreators, function (err, result) {
+                        if(err){
+                            return reject(err);
+                        }else{
+                            return resolve();
+                        }
+                    });
+}
+
+);
+
+}
+
+exports.insertRewards = function(rewardsData){
+	return new RSVP.Promise(function(resolve, reject){
+                   return db.post().query('INSERT INTO Reward (Amount, Description,projectId) VALUES (?);', [rewardsData], function (err, result) {
+                        if(err){
+                            return reject(err);
+                        }else{
+
+                            return resolve();
+                        }
+                    });
+			});
+
+}
+
+exports.viewAllProjects = function (startIndex, count) {
+    return new RSVP.Promise(function(resolve, reject){
+		return db.get().query('select * from Project where isOpen = true order by Id limit ?, ?;', [parseInt(startIndex), parseInt(count)], function (err, result) {
+            if (err) {
+                return reject(err);
+            } else {
+                return resolve(result);
             }
-            return done (null, info);
-        } else {
-            return done (err);
-        }
-    });
-};
-
-exports.insert = function (info, done) {
-    let title = info['title'];
-    let subtitle = info['subtitle'];
-    let description = info['description'];
-    let imageUri = info['imageUri'];
-    let target= info['target'];
-    let creator = info[''];
-    let rewards = info[''];
-
-    let values = [title, subtitle, description, imageUri, target, [creator],[rewards]];
-    let sql = 'INSERT INTO projects (title, subtitle, description, imageUri, target, creator, rewards) ' +
-        'VALUES (?,?,?,?,?,?,?);';
-    db.post().query(sql, [values], function (err, result) {
-        if (!err){
-            return done ({"SUCCESS" : "success insert a project"});
-        } else {
-            return done (err);
-        }
-    });
-};
-
-exports.getOne = function (info, done) {
-    db.get().query('SELECT * FROM project WHERE projectId = ?', info, function (err, rows) {
-        if(!err){
-            let creationDate = rows[0].creationDate;
-            let title = rows[0].title;
-            let subtitle = rows[0].subtitle;
-            let description = rows[0].description;
-            let imageUri = rows[0].imageUri;
-            let target = rows[0].target;
-            let progress = rows[0].progress;
+        });
+	});
+}
 
 
 
-            return done(rows);
-        } else {
-            return done(err);
-        }
-    });
-};
-
-exports.alter = function (projectName, projectId, done) {
-    db.put().query('UPDATE project SET projectName = ? WHERE projectId = ?', [projectName, projectId], function (err, result) {
-        if(!err){
-            return done({"SUCCESS":"success update project detail!"});
+exports.checkProjectCreator = function (userId, projectId) {
+	
+	return new RSVP.Promise(function(resolve, reject){
+		
+	return db.get().query('select ProjectId from ProjectCreators where UserId = ? and ProjectId = ?;',
+	[userId, projectId], function (err, result) {
+        if(err){
+            return reject(err);
         }else{
-            return done(err);
+			return resolve(result);
         }
-    });
+        });
+	});
+}
+
+exports.updateProjectById = function (isOpen, projectId) {
+	
+	return new RSVP.Promise(function(resolve, reject){
+		
+	return db.get().query('UPDATE Project SET IsOpen = ? WHERE Id = ?', [isOpen, projectId], function (err, result) {
+        if(err){
+            return reject(err);
+        }else{
+			return resolve(result);
+        }
+	});
+	});
+}
+
+
+exports.getImagePath = function (projectId) {
+	return new RSVP.Promise(function(resolve, reject){
+		
+	return db.get().query('select imageUri from Project WHERE Id = ?', [projectId], function (err, result) {
+        if(err){
+            return reject(err);
+        }else{
+			return resolve(result);
+        }
+	});
+	});
+}
+
+exports.updateImagePath = function (imagePath, projectId) {
+	return new RSVP.Promise(function(resolve, reject){
+		
+	return db.get().query('UPDATE Project SET imageUri = ? WHERE Id = ?', [imagePath, projectId], function (err, result) {
+        if(err){
+            return reject(err);
+        }else{
+			return resolve(result);
+        }
+	});
+	});
+}
+
+
+
+exports.IsProjectOpen = function (projectId) {
+	
+	return new RSVP.Promise(function(resolve, reject){
+		
+ db.get().query('select Project.IsOpen from Project where Id = ?;',
+	[projectId], function (err, result) {
+        if(err){
+            return reject(err);
+        }else{
+            return resolve(result);
+        }
+       });
+	});
+}
+
+exports.InsertPledge = function (data) {
+	
+	let projectId = data['ProjectId'];
+    let amount = data['Amount'];
+    let anonymous = data['isAnonymous'];
+    let authToken = data['authToken'];
+    let userId = data['UserId'];
+	
+	return new RSVP.Promise(function(resolve, reject){
+		db.put().query('INSERT INTO Pledge (BackerId, ProjectId,Amount, AuthToken, IsAnonymous) VALUES (?,?,?,?,?);', [userId, projectId, amount, authToken, anonymous], function (err, result) {
+        if(err){
+            return reject(403);
+        }
+		else{
+			return resolve(result);
+        }
+});
+			
+        });
+}
+
+exports.getProjectById = function(projectId){
+	return new RSVP.Promise(function(resolve, reject){
+		db.get().query('SELECT * FROM Project WHERE IsOpen = 1 and Id = ?', projectId, function (err, rows) {
+			if (err) {
+				return reject(err);
+			} else {
+				return resolve(rows);
+			}
+		});
+	});
 };
 
-exports.getOneImage = function (imageId, done) {
-    db.get().query('SELECT * FROM project where imageId = ?', [imageId], function (err, rows) {
-        if(!err){
-            return done(rows);
-        } else {
-            return done (err);
-        }
-    });
+exports.getCreatorsByProjectId = function(projectId){
+	return new RSVP.Promise(function(resolve, reject){
+		db.get().query('select distinct Users.id, Users.name from Users inner join ProjectCreators on Users.id = ProjectCreators.UserId where ProjectCreators.ProjectId = ?;', projectId, function (err, rows) {
+			if (err) {
+				return reject(err);
+			} else {
+				return resolve(rows);
+			}
+		});
+	});
 };
 
-exports.alterOneImage = function (imageFile, imageId, done) {
-    db.put().query('UPDATE image SET imageFile = ? WHERE imageId = ?', [imageFile, imageId], function (err, result) {
-        if(!err){
-            return done({"SUCCESS":"success update image file!"});
-        } else {
-            return done (err);
-        }
-    });
+exports.getRewardsByProjectId = function(projectId){
+	return new RSVP.Promise(function(resolve, reject){
+		db.get().query('select * from Reward inner join Project on Reward.ProjectId = Project.Id where Project.Id = ?;', projectId, function (err, rows) {
+			if (err) {
+				return reject(err);
+			} else {
+				return resolve(rows);
+			}
+		});
+	});
 };
 
-exports.pledgeAmount = function (amount) {
-    db.post().query('INSERT INTO pledge (amount) VALUES ?', [amount], function (err, result) {
-        if(!err){
-            return done({"SUCCESS": "success insert amount to pledge!"});
-        } else {
-            return done(err);
-        }
-    });
+exports.getBackersByProjectId = function(projectId){
+	return new RSVP.Promise(function(resolve, reject){
+		db.get().query('select Users.name, sum(Pledge.Amount) as Amount from Pledge inner join Users on Pledge.BackerId = Users.id  where Pledge.ProjectId = ? group by Users.name;', projectId, function (err, rows) {
+			if (err) {
+				return reject(err);
+			} else {
+				return resolve(rows);
+			}
+		});
+	});
 };
 
-exports.listReward = function (rewardId, done) {
-    db.get().query('SELECT id, amount, description FROM reward where rewardId = ?', [rewardId], function (err, rows) {
-        let res = [];
-        if(!err){
-            return done(rows);
-        }else {
-            for (data in rows){
-                let id = data.id;
-                let amount = data.amount;
-                let description = data.description;
-                let info = {
-                    "id" : id,
-                    "amount": amount,
-                    "description": description
-                };
-                res.push(info);
-            }
-
-            return done(err, res);
-        }
-    });
+exports.getCurrentPledgedByProjectId = function(projectId){
+	return new RSVP.Promise(function(resolve, reject){
+		db.get().query('select sum(Pledge.Amount) as currentPledged from Pledge inner join Project on Pledge.ProjectId = Project.Id where Project.Id = ?;', projectId, function (err, rows) {
+			if (err) {
+				return reject(err);
+			} else {
+				return resolve(rows);
+			}
+		});
+	});
 };
 
-exports.alterReward = function () {
-    db.put().query('UPDATE reward set amount = ?  WHERE rewardId = ?', [amount, rewardId], function (err, result) {
-        if(!err){
-            return done({"SUCCESS" : "success update amount for reward!"});
-        } else {
-            return done(err);
-        }
-    });
+exports.getnumberOfBackersByProjectId = function(projectId){
+	return new RSVP.Promise(function(resolve, reject){
+		db.get().query('select count(distinct BackerId) as numberOfBackers from Pledge inner join Project on pledge.ProjectId = Project.Id where Project.Id = ?;', projectId, function (err, rows) {
+			if (err) {
+				return reject(err);
+			} else {
+				return resolve(rows);
+			}
+		});
+	});
+};
+
+exports.ViewProjectRewardsById = function(projectId){
+	return new RSVP.Promise(function(resolve, reject){
+		db.get().query('select * from Reward where ProjectId = ?;', projectId, function (err, rows) {
+			if (err) {
+				return reject(err);
+			} else {
+				return resolve(rows);
+			}
+		});
+	});
+};
+
+exports.updateProjectRewardsById = function (rewards) {
+	return new RSVP.Promise(function(resolve, reject){
+		var results = [];
+	for(let reward of rewards){
+		db.get().query('UPDATE Reward SET Amount = ?, Description = ?  WHERE Id = ? and ProjectId = ?', [reward[1], reward[2], reward[0], reward[3]], function (err, result) {
+			if(err){
+				return reject(err);
+			}else{
+				results.push(result);
+			}
+		});
+	}
+	return resolve(results);	
+	});
 };

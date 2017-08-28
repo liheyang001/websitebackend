@@ -8,93 +8,100 @@ const state = {
     pool: null
 };
 
+/*
 exports.connect = function (done) {
     state.pool = mysql.createPool({
-        connectionLimit : 500,
-        host: process.env.SENG365_MYSQL_HOST || 'localhost',
+        host: '127.0.0.1',
         user: 'root',
-        password: "secret",
-        port: process.env.SENG365_MYSQL_HOST || '6033',
-        database: "mysql",
+        password: "jie821129",
+        port: '3306',
+        database: 'crowdfunding'
+    });
+    done();
+};
+*/
+
+exports.connect = function(done){
+    state.pool = mysql.createPool({
+        connectionLimit: 500,
+        host: process.env.SENG365_MYSQL_HOST || 'localhost',
+        port: process.env.SENG365_MYSQL_PORT || 6033,
+        user: 'root',
+        password: 'secret',
+        database: 'mysql',
         multipleStatements: true
     });
 
-    //
-    // /* create table */
-    // let createTable = 'create database mysql;' +
-    //     'use mysql;'+
-    //     'create table if not exists logInResponse ('+
-    //     'logInId int(10) not null,'+
-    //     'logInToken  varchar(150)    not null,'+
-    //     'primary key (logInId));'+
-    //
-    //
-    //
-    //     'create table if not exists users (userId int(10) not null  auto_increment,'+
-    //     'userName varchar(150) not null,'+
-    //     'userPassword varchar(150) not null,'+
-    //     'userLocation    varchar(150) not null,'+
-    //     'userEmail    varchar(150) not null,'+
-    //     'primary key (userId));'+
-    //
-    //     'CREATE TABLE if not exists projects ('+
-    //     'projectId  int unsigned not null auto_increment,'+
-    //     'projectTitle   varchar(150)    not null,'+
-    //     'projectSubtitle    varchar(150) not null,'+
-    //     'projectDesc    varchar(150),'+
-    //     'projectImageUri   varchar(150)    not null,'+
-    //     'projectTarget  int(10) not null default 0,'+
-    //     'creatorId  int(10),'+
-    //     'creationDate   timestamp,'+
-    //     'currentPledge  int(10) default 0,'+
-    //     'numberOfBackers  int(10) default 0,'+
-    //     'rewardsId   int unsigned not null,'+
-    //     'primary key (projectId));'+
-    //
-    //     'create table if not exists creates ('+
-    //     'userId int(10) not null,'+
-    //     'projectId int unsigned not null,'+
-    //     'foreign key (projectId) references projects(projectId),'+
-    //     'foreign key (userId) references users(userId));'+
-    //
-    //     'Create table if not exists rewards ('+
-    //     'rewardId  int unsigned not null auto_increment,'+
-    //     'rewardAmount   int(10) not null,'+
-    //     'rewardDesc varchar(150),'+
-    //     'projectId  int unsigned not null,'+
-    //     'primary key (rewardId),'+
-    //     'foreign key (projectId) references projects (projectId));'+
-    //
-    //
-    //     'create table if not exists pledges ('+
-    //     'pledgeId   int unsigned not null auto_increment,'+
-    //     'backerId   int(10) not null,'+
-    //     'rewardId	int unsigned not null,'+
-    //     'projectId  int unsigned not null,'+
-    //     'amount  int(15) not null,'+
-    //     'anonymous   bool not null default 0,'+
-    //     'authToken   varchar(150)    not null,'+
-    //     'pledgeTime timestamp,'+
-    //     'primary key (pledgeId),'+
-    //     'foreign key (rewardId) references rewards (rewardId),'+
-    //     'foreign key (backerId) references users (userId),'+
-    //     'foreign key (projectId) references projects (projectId));';
-    //
-    //
-    // console.log(createTable);
-    // state.pool.query(createTable,function (err,rows) {
-    //     if (err)
-    //     {
-    //         state.pool.query('drop database mysql;');
-    //         console.log(err);
-    //     }
-    // });
+    let createTable =
+        'drop table ProjectCreators;'+
+        'drop table Reward;'+
+        'drop table Pledge;'+
+        'drop table Project;'+
+        'drop table Users;'+
 
 
+        'CREATE TABLE IF NOT EXISTS Users ('+
+        'id int(10) not null  auto_increment,'+
+        'name varchar(150) not null,'+
+        'password varchar(150) not null,'+
+        'location varchar(150) not null,'+
+        'email varchar(150) not null,'+
+        'token varchar(150),'+
+        'isBacker tinyint(1) DEFAULT 0,'+
+        'isDeleted tinyint(1) DEFAULT 0,'+
+        'PRIMARY KEY (id));'+
+
+        'CREATE TABLE IF NOT EXISTS Project ('+
+        'Id int not null auto_increment,'+
+        'Title varchar(150) not null,'+
+        'Subtitle varchar(150) not null,'+
+        'ImageUri varchar(150) not null,'+
+        'Description varchar(150),'+
+        'Target int(10) not null default 0,'+
+        'CreatorId int(10),'+
+        'CreationDate timestamp,'+
+        'IsOpen tinyint(1) default 0,'+
+        'PRIMARY KEY (Id),'+
+        'FOREIGN KEY(CreatorId) REFERENCES Users(id));'+
+
+        'CREATE TABLE IF NOT EXISTS ProjectCreators('+
+        'Id int not null auto_increment,'+
+        'ProjectId int not null,'+
+        'UserId int not null,'+
+        'PRIMARY KEY (Id),'+
+        'FOREIGN KEY(UserId) REFERENCES Users(id),'+
+        'FOREIGN KEY(ProjectId) REFERENCES Project(id));'+
+
+        'CREATE TABLE IF NOT EXISTS Reward ('+
+        'Id int not null auto_increment,'+
+        'Amount int(10) not null,'+
+        'Description varchar(150),'+
+        'ProjectId  int (10),'+
+        'PRIMARY KEY (Id),'+
+        'FOREIGN KEY (ProjectId) REFERENCES Project (Id),'+
+        'FOREIGN KEY(Id) REFERENCES Users (id));'+
+
+        'CREATE TABLE Pledge ('+
+        'Id int not null auto_increment,'+
+        'AuthToken varchar(150) not null,'+
+        'BackerId int(10) not null,'+
+        'ProjectId  int(10) not null,'+
+        'Amount int(15) not null,'+
+        'IsAnonymous bool default 0,'+
+        'PRIMARY KEY (Id),'+
+        'FOREIGN KEY (BackerId) references Users (id),'+
+        'FOREIGN KEY (ProjectId) references Project (Id));';
+
+    state.pool.query(createTable, function (err, rows) {
+                    if(err){
+                        console.log(err);
+
+                    }else{
+                        console.log('success to create tables');
+                    }
+                });
     done();
-
 };
-
 
 
 exports.post = function () {
@@ -112,4 +119,3 @@ exports.delete = function () {
 exports.get = function () {
     return state.pool;
 };
-
